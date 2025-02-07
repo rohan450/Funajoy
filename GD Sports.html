@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geometry Dash Clone</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: url('https://source.unsplash.com/1600x900/?forest') no-repeat center center/cover;
+        }
+        canvas {
+            display: block;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: black;
+        }
+        #restartBtn {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 10px 20px;
+            font-size: 20px;
+            background-color: gold;
+            border: none;
+            cursor: pointer;
+        }
+        #restartBtn {
+            top: 50%;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <button id="restartBtn" onclick="restartGame()">Restart</button>
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        canvas.width = 800;
+        canvas.height = 400;
+
+        let gameSpeed = 5;
+        let gravity = 1.2;
+        let gameOver = false;
+        let level = 1; // Start at level 1
+        let obstacles = [];
+        let bottomObstacles = [];
+        let lastObstacleX = canvas.width;
+        const obstacleGap = 200 + level * 40;  // Increase gap as level progresses
+
+        const colors = ["red", "green", "blue", "yellow", "purple", "orange", "pink", "cyan", "brown", "gray"];  // List of obstacle colors
+
+        class Player {
+            constructor() {
+                this.width = 20;
+                this.height = 20;
+                this.x = 50;
+                this.y = canvas.height - this.height - 20;
+                this.dy = 0;
+                this.jumpStrength = -9;
+                this.color = "gold";
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+            }
+
+            update() {
+                this.dy += gravity;
+                this.y += this.dy;
+                if (this.y > canvas.height - this.height - 20) {
+                    this.y = canvas.height - this.height - 20;
+                    this.dy = 0;
+                }
+                if (this.y < 0) {
+                    this.y = 0;
+                    this.dy = 0;
+                }
+                this.draw();
+            }
+
+            jump() {
+                this.dy = this.jumpStrength;
+            }
+        }
+
+        class Obstacle {
+            constructor(x, width, height, yPosition, pattern, color) {
+                this.width = width;
+                this.height = height;
+                this.x = x;
+                this.y = yPosition;
+                this.color = color;
+                this.pattern = pattern;
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                if (this.pattern === 'A') {
+                    ctx.beginPath();
+                    ctx.moveTo(this.x, this.y + this.height);
+                    ctx.lineTo(this.x + this.width / 2, this.y);
+                    ctx.lineTo(this.x + this.width, this.y + this.height);
+                    ctx.closePath();
+                    ctx.fill();
+                } else if (this.pattern === 'V') {
+                    ctx.beginPath();
+                    ctx.moveTo(this.x, this.y);
+                    ctx.lineTo(this.x + this.width, this.y);
+                    ctx.lineTo(this.x + this.width / 2, this.y + this.height);
+                    ctx.closePath();
+                    ctx.fill();
+                } else if (this.pattern === 'B') {
+                    ctx.fillRect(this.x, this.y, this.width, this.height);
+                } else if (this.pattern === 'M') {
+                    ctx.beginPath();
+                    ctx.moveTo(this.x, this.y + this.height);
+                    ctx.lineTo(this.x + this.width, this.y + this.height);
+                    ctx.lineTo(this.x + this.width / 2, this.y);
+                    ctx.closePath();
+                    ctx.fill();
+                } else if (this.pattern === 'Y') {
+                    ctx.beginPath();
+                    ctx.moveTo(this.x, this.y);
+                    ctx.lineTo(this.x + this.width, this.y);
+                    ctx.lineTo(this.x + this.width / 2, this.y + this.height);
+                    ctx.closePath();
+                    ctx.fill();
+                } else if (this.pattern === 'T') {
+                    ctx.beginPath();
+                    ctx.moveTo(this.x, this.y + this.height);
+                    ctx.lineTo(this.x + this.width / 2, this.y);
+                    ctx.lineTo(this.x + this.width, this.y + this.height);
+                    ctx.closePath();
+                    ctx.fill();
+                } else if (this.pattern === 'R') {
+                    ctx.fillRect(this.x, this.y, this.width, this.height);
+                } else if (this.pattern === 'E') {
+                    ctx.beginPath();
+                    ctx.arc(this.x + this.width / 2, this.y + this.height / 2, this.width / 2, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (this.pattern === 'Q') {
+                    ctx.beginPath();
+                    ctx.arc(this.x + this.width / 2, this.y + this.height / 2, this.width / 2, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (this.pattern === 'Fish') {
+                    ctx.beginPath();
+                    ctx.moveTo(this.x, this.y);
+                    ctx.lineTo(this.x + this.width, this.y + this.height / 2);
+                    ctx.lineTo(this.x, this.y + this.height);
+                    ctx.closePath();
+                    ctx.fill();
+                } else if (this.pattern === 'Square') {
+                    ctx.fillRect(this.x, this.y, this.width, this.height);
+                } else if (this.pattern === 'Triangle') {
+                    ctx.beginPath();
+                    ctx.moveTo(this.x, this.y + this.height);
+                    ctx.lineTo(this.x + this.width / 2, this.y);
+                    ctx.lineTo(this.x + this.width, this.y + this.height);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+            }
+
+            update() {
+                this.x -= gameSpeed;
+                if (this.x + this.width < 0) {
+                    this.x = canvas.width + Math.random() * 300;
+                    this.y = Math.random() * (canvas.height - this.height - 100) + 50;
+                    this.pattern = ['A', 'V', 'B', 'M', 'Y', 'T', 'R', 'E', 'Q', 'Fish', 'Square', 'Triangle'][Math.floor(Math.random() * 12)];
+                    this.color = colors[Math.floor(Math.random() * colors.length)];
+                }
+                this.draw();
+            }
+        }
+
+        function checkCollision(player, obstacle) {
+            return (
+                player.x < obstacle.x + obstacle.width &&
+                player.x + player.width > obstacle.x &&
+                player.y < obstacle.y + obstacle.height &&
+                player.y + player.height > obstacle.y
+            );
+        }
+
+        const player = new Player();
+
+        function generateObstaclesForLevel() {
+            const numObstacles = Math.floor(level * 3);  // Increase number of obstacles with each level
+            let currentX = canvas.width;
+            const obstacleGap = 200 + level * 40;  // Increase gap as level progresses
+
+            // Generate air obstacles
+            for (let i = 0; i < numObstacles; i++) {
+                const width = Math.random() * 40 + 20;  // Random width between 20 and 60
+                const height = Math.random() * 60 + 30;  // Random height between 30 and 90
+                const yPosition = Math.random() * (canvas.height - height - 100) + 50;  // Random y position
+                const pattern = ['A', 'V', 'B', 'M', 'Y', 'T', 'R', 'E', 'Q', 'Fish', 'Square', 'Triangle'][Math.floor(Math.random() * 12)];  // Random pattern
+                const color = colors[Math.floor(Math.random() * colors.length)];  // Random color
+                obstacles.push(new Obstacle(currentX, width, height, yPosition, pattern, color));
+                currentX += obstacleGap;
+            }
+
+            // Generate bottom obstacles
+            const numBottomObstacles = Math.floor(level * 2);  // Increase number of bottom obstacles
+            currentX = canvas.width;
+            for (let i = 0; i < numBottomObstacles; i++) {
+                const width = Math.random() * 60 + 30;
+                const height = 20;  // Height of bottom obstacle
+                const color = colors[Math.floor(Math.random() * colors.length)];  // Random color
+                bottomObstacles.push(new Obstacle(currentX, width, height, canvas.height - height - 20, 'B', color));
+                currentX += 150 + level * 20;
+            }
+        }
+
+        function increaseDifficulty() {
+            if (gameSpeed < 8) {
+                gameSpeed += 0.05; // Slightly faster speed increase
+            }
+            if (level < 5) {
+                level++;
+                generateObstaclesForLevel(); // Generate obstacles based on new level
+            }
+        }
+
+        function animate() {
+            if (gameOver) {
+                ctx.fillStyle = "white";
+                ctx.font = "30px Arial";
+                ctx.fillText("Game Over", canvas.width / 2 - 70, canvas.height / 2);
+                document.getElementById("restartBtn").style.display = "block";
+                return;
+            }
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            player.update();
+            obstacles.forEach(obs => {
+                obs.update();
+                if (checkCollision(player, obs)) {
+                    gameOver = true;
+                }
+            });
+            bottomObstacles.forEach(obs => {
+                obs.update();
+                if (checkCollision(player, obs)) {
+                    gameOver = true;
+                }
+            });
+
+            increaseDifficulty();
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+
+        function jump() {
+            player.jump();
+        }
+
+        window.addEventListener("keydown", (e) => {
+            if (e.code === "Space") {
+                jump();
+            }
+        });
+
+        window.addEventListener("mousedown", () => {
+            jump();
+        });
+
+        function restartGame() {
+            gameOver = false;
+            player.y = canvas.height - player.height - 20;
+            player.dy = 0;
+            level = 1;
+            bottomObstacles = [];
+            obstacles = [];
+            generateObstaclesForLevel(); // Regenerate obstacles for level 1
+            document.getElementById("restartBtn").style.display = "none";
+            animate();
+        }
+    </script>
+</body>
+</html>

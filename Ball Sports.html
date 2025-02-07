@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ball Bounce Game</title>
+    <style>
+        body {
+            text-align: center;
+            background-color: #f4f4f4;
+        }
+        canvas {
+            background: #222;
+            display: block;
+            margin: 20px auto;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin-top: 10px;
+            cursor: pointer;
+        }
+        #timer {
+            font-size: 20px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Ball Bounce Game</h1>
+    <canvas id="gameCanvas" width="500" height="400"></canvas>
+    <div id="timer">Time: 0s</div>
+    <button id="restartButton" style="display: none;">Restart Game</button>
+    <audio id="paddleSound" src="https://www.fesliyanstudios.com/play-mp3/390"></audio>
+    <audio id="wallSound" src="https://www.fesliyanstudios.com/play-mp3/391"></audio>
+    <audio id="gameOverSound" src="https://www.fesliyanstudios.com/play-mp3/396"></audio>
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        const restartButton = document.getElementById("restartButton");
+        const timerDisplay = document.getElementById("timer");
+        const paddleSound = document.getElementById("paddleSound");
+        const wallSound = document.getElementById("wallSound");
+        const gameOverSound = document.getElementById("gameOverSound");
+        
+        let ball, paddle, gameOver, speedMultiplier, elapsedTime, timerInterval;
+        let ballColor = "red";
+        
+        function initializeGame() {
+            ball = { x: 250, y: 200, radius: 10, dx: 3, dy: 3 };
+            paddle = { x: 200, width: 100, height: 10, speed: 5 };
+            gameOver = false;
+            speedMultiplier = 1;
+            elapsedTime = 0;
+            timerDisplay.innerText = "Time: 0s";
+            clearInterval(timerInterval);
+            startTimer();
+            restartButton.style.display = "none";
+            updateSpeed();
+            update();
+        }
+        
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                if (!gameOver) {
+                    elapsedTime++;
+                    timerDisplay.innerText = `Time: ${elapsedTime}s`;
+                }
+            }, 1000);
+        }
+        
+        function updateSpeed() {
+            let speedLevels = [
+                { time: 10, multiplier: 1.5 },
+                { time: 30, multiplier: 2.0 },
+                { time: 60, multiplier: 2.5 },
+                { time: 100, multiplier: 3.0 },
+                { time: 150, multiplier: 3.5 },
+                { time: 210, multiplier: 4.0 },
+                { time: 280, multiplier: 4.5 },
+                { time: 360, multiplier: 5.0 },
+                { time: 450, multiplier: 5.5 },
+                { time: 550, multiplier: 6.5 }
+
+            ];
+            
+            for (let level of speedLevels) {
+                if (elapsedTime >= level.time) {
+                    speedMultiplier = level.multiplier;
+                }
+            }
+            
+            setTimeout(updateSpeed, 1000);
+        }
+        
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "ArrowLeft" && paddle.x > 0) {
+                paddle.x -= paddle.speed * 5;
+            } else if (event.key === "ArrowRight" && paddle.x + paddle.width < canvas.width) {
+                paddle.x += paddle.speed * 5;
+            }
+        });
+        
+        function drawBall() {
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+            ctx.fillStyle = ballColor;
+            ctx.fill();
+            ctx.closePath();
+        }
+        
+        function drawPaddle() {
+            ctx.fillStyle = "brown";
+            ctx.fillRect(paddle.x, canvas.height - 20, paddle.width, paddle.height);
+        }
+        
+        function update() {
+            if (gameOver) return;
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawBall();
+            drawPaddle();
+            
+            ball.x += ball.dx * speedMultiplier;
+            ball.y += ball.dy * speedMultiplier;
+            
+            if (ball.x - ball.radius < 0 || ball.x + ball.radius > canvas.width) {
+                ball.dx *= -1;
+                wallSound.play();
+                flashBallColor();
+            }
+            
+            if (ball.y - ball.radius < 0) {
+                ball.dy *= -1;
+                wallSound.play();
+                flashBallColor();
+            }
+            
+            if (ball.y + ball.radius > canvas.height - 20 &&
+                ball.x > paddle.x &&
+                ball.x < paddle.x + paddle.width) {
+                ball.dy *= -1;
+                paddleSound.play();
+                flashBallColor();
+            } else if (ball.y + ball.radius > canvas.height) {
+                gameOverSound.play();
+                alert("Game Over!");
+                gameOver = true;
+                clearInterval(timerInterval);
+                restartButton.style.display = "block";
+            }
+            
+            requestAnimationFrame(update);
+        }
+        
+        function flashBallColor() {
+            ballColor = "yellow";
+            setTimeout(() => ballColor = "red", 100);
+        }
+        
+        restartButton.addEventListener("click", initializeGame);
+        
+        initializeGame();
+    </script>
+</body>
+</html>
